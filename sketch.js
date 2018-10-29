@@ -9,10 +9,13 @@ var showing = true;
 var waitress;
 var currtime;
 var prevMicLevel = -100;
-var divisions = 5;
 var cnv;
-var speed = 1;
-var cnv;
+
+
+
+
+var particles = new Array(1024);
+
 
 function setup() {
   cnv = createCanvas(windowWidth, windowHeight);
@@ -23,18 +26,22 @@ function setup() {
   fft.setInput(mic);
 
   waitress = millis() + 10000;
+  frameRate(30);
+  // instantiate the particles.
+  for (var i = 0; i < particles.length; i++) {
+    var x = map(i, 0, 1024, 0, width * 2);
+    var y = random(0, height);
+    var position = createVector(x, y);
+    particles[i] = new Particle(position);
+  }
 
 }
 
 function draw() {
-  updateVariables(); //Update all the necessary vars in a single function
+  updateVariables(); //Update all the necessary vars 
 
-  if (prevMicLevel < micLevel) {
-    background(randomColor())
-    prevMicLevel = micLevel;
-  }
-
-
+  background(0);
+  background(randomColor())
   reactiveMouth();
   reactiveDot();
   reactiveArcs();
@@ -43,39 +50,29 @@ function draw() {
   WaveformPaint();
 
   SpectrumPaint();
-  //OctavePaint();
+  RainPaint();
   hideMouse(); //FUNCION PARA ESCONDER EL MOUSE
+
 }
 
-function OctavePaint() {
-  var h = height / divisions;
-  var spectrum = fft.analyze();
-  var newBuffer = [];
+function RainPaint() {
+  // update and draw all [binCount] particles!
+  // Each particle gets a level that corresponds to
+  // the level at one bin of the FFT spectrum. 
+  // This level is like amplitude, often called "energy."
+  // It will be a number between 0-255.
+  for (var i = 0; i < spectrum.length; i++) {
+    var thisLevel = map(spectrum[i], 0, 255, 0, 1);
 
-  var scaledSpectrum = splitOctaves(spectrum, 12);
-  var len = scaledSpectrum.length;
+    // update values based on amplitude at this part of the frequency spectrum
+    particles[i].update(thisLevel);
 
-  background(200, 200, 200, 1);
-  // copy before clearing the background
-  copy(cnv, 0, 0, width, height, 0, speed, width, height);
+    // draw the particle
+    particles[i].draw();
 
-  // draw shape
-  beginShape();
-
-  // one at the far corner
-  curveVertex(0, h);
-
-  for (var i = 0; i < len; i++) {
-    var point = smoothPoint(scaledSpectrum, i, 2);
-    var x = map(i, 0, len - 1, 0, width);
-    var y = map(point, 0, 255, h, 0);
-    curveVertex(x, y);
+    // update x position (in case we change the bin count while live coding)
+    particles[i].position.x = map(i, 0, spectrum.length, 0, width * 2);
   }
-
-  // one last point at the end
-  curveVertex(width, h);
-
-  endShape();
 }
 
 function updateVariables() {
@@ -162,91 +159,39 @@ function hideMouse() {
     }
   }
 }
-/**
- *  Divides an fft array into octaves with each
- *  divided by three, or by a specified "slicesPerOctave".
- *  
- *  There are 10 octaves in the range 20 - 20,000 Hz,
- *  so this will result in 10 * slicesPerOctave + 1
- *
- *  @method splitOctaves
- *  @param {Array} spectrum Array of fft.analyze() values
- *  @param {Number} [slicesPerOctave] defaults to thirds
- *  @return {Array} scaledSpectrum array of the spectrum reorganized by division
- *                                 of octaves
- */
-function splitOctaves(spectrum, slicesPerOctave) {
-  var scaledSpectrum = [];
-  var len = spectrum.length;
 
-  // default to thirds
-  var n = slicesPerOctave || 3;
-  var nthRootOfTwo = Math.pow(2, 1 / n);
-
-  // the last N bins get their own 
-  var lowestBin = slicesPerOctave;
-
-  var binIndex = len - 1;
-  var i = binIndex;
-
-
-  while (i > lowestBin) {
-    var nextBinIndex = round(binIndex / nthRootOfTwo);
-
-    if (nextBinIndex === 1) return;
-
-    var total = 0;
-    var numBins = 0;
-
-    // add up all of the values for the frequencies
-    for (i = binIndex; i > nextBinIndex; i--) {
-      total += spectrum[i];
-      numBins++;
-    }
-
-    // divide total sum by number of bins
-    var energy = total / numBins;
-    scaledSpectrum.push(energy);
-
-    // keep the loop going
-    binIndex = nextBinIndex;
-  }
-
-  // add the lowest bins at the end
-  for (var j = i; j > 0; j--) {
-    scaledSpectrum.push(spectrum[j]);
-  }
-
-  // reverse so that array has same order as original array (low to high frequencies)
-  scaledSpectrum.reverse();
-
-  return scaledSpectrum;
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  background(0);
 }
 
+// ===============
+// Particle class
+// ===============
 
-// average a point in an array with its neighbors
-function smoothPoint(spectrum, index, numberOfNeighbors) {
-
-  // default to 2 neighbors on either side
-  var neighbors = numberOfNeighbors || 2;
-  var len = spectrum.length;
-
-  var val = 0;
-
-  // start below the index
-  var indexMinusNeighbors = index - neighbors;
-  var smoothedPoints = 0;
-
-  for (var i = indexMinusNeighbors; i < (index + neighbors) && i < len; i++) {
-    // if there is a point at spectrum[i], tally it
-    if (typeof (spectrum[i]) !== 'undefined') {
-      val += spectrum[i];
-      smoothedPoints++;
-    }
-  }
-
-  val = val / smoothedPoints;
-
-  return val;
+var Particle = function (position) {
+  this.position = position;
+  this.scale = random(0, 1);
+  this.speed = createVector(0, random(0, 10));
+  this.color = [random(0, 255), random(0, 255), random(0, 255)];
 }
-//from https://github.com/therewasaguy/p5-music-viz/blob/gh-pages/demos/05_fft_scaleOneThirdOctave_UnknownPleasures/sketch.js
+
+var theyExpand = 1;
+
+// use FFT bin level to change speed and diameter
+Particle.prototype.update = function (someLevel) {
+  this.position.y += this.speed.y / (someLevel * 2);
+  if (this.position.y > height) {
+    this.position.y = 0;
+  }
+  this.diameter = map(someLevel, 0, 1, 0, 100) * this.scale * theyExpand;
+
+}
+
+Particle.prototype.draw = function () {
+  fill(this.color);
+  ellipse(
+    this.position.x, this.position.y,
+    this.diameter, this.diameter
+  );
+}
