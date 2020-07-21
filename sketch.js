@@ -13,7 +13,6 @@ var cnv;
 
 
 
-
 var particles = new Array(1024);
 
 
@@ -35,13 +34,14 @@ function setup() {
     particles[i] = new Particle(position);
   }
 
+  //var color = randomColor()
 }
 
 function draw() {
   updateVariables(); //Update all the necessary vars 
 
   background(0);
-  background(randomColor())
+  //background(color)
   reactiveMouth();
   reactiveDot();
   reactiveArcs();
@@ -51,7 +51,7 @@ function draw() {
 
   SpectrumPaint();
   RainPaint();
-  hideMouse(); //FUNCION PARA ESCONDER EL MOUSE
+  hideMouse(); 
 
 }
 
