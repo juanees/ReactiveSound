@@ -1,22 +1,25 @@
-var mic;
-var fft;
+let mic;
+let fft;
 
-var micLevel;
-var spectrum;
-var waveform;
+let micLevel;
+let spectrum;
+let waveform;
 
-var showing = true;
-var waitress;
-var currtime;
-var prevMicLevel = -100;
-var cnv;
+let showing = true;
+let waitress;
+let currtime;
+let prevMicLevel = -100;
+let cnv;
 
 
 
-var particles = new Array(1024);
+let particles = new Array(1024);
 
 
 function setup() {
+  // mimics the autoplay policy
+  getAudioContext().suspend();
+
   cnv = createCanvas(windowWidth, windowHeight);
   background(0);
   mic = new p5.AudioIn()
@@ -27,17 +30,20 @@ function setup() {
   waitress = millis() + 10000;
   frameRate(30);
   // instantiate the particles.
-  for (var i = 0; i < particles.length; i++) {
-    var x = map(i, 0, 1024, 0, width * 2);
-    var y = random(0, height);
-    var position = createVector(x, y);
+  for (let i = 0; i < particles.length; i++) {
+    let x = map(i, 0, 1024, 0, width * 2);
+    let y = random(0, height);
+    let position = createVector(x, y);
     particles[i] = new Particle(position);
   }
 
-  //var color = randomColor()
+  //let color = randomColor()
 }
 
 function draw() {
+  textAlign(CENTER, CENTER);
+  text(getAudioContext().state, width/2, height/2);
+
   updateVariables(); //Update all the necessary vars 
 
   background(0);
@@ -61,8 +67,8 @@ function RainPaint() {
   // the level at one bin of the FFT spectrum. 
   // This level is like amplitude, often called "energy."
   // It will be a number between 0-255.
-  for (var i = 0; i < spectrum.length; i++) {
-    var thisLevel = map(spectrum[i], 0, 255, 0, 1);
+  for (let i = 0; i < spectrum.length; i++) {
+    let thisLevel = map(spectrum[i], 0, 255, 0, 1);
 
     // update values based on amplitude at this part of the frequency spectrum
     particles[i].update(thisLevel);
@@ -79,7 +85,7 @@ function updateVariables() {
   micLevel = mic.getLevel() * 5;
   spectrum = fft.analyze();
   waveform = fft.waveform();
-  var predefinedFeq = ["bass", "lowMid", "mid", "highMid", "treble"];
+  let predefinedFeq = ["bass", "lowMid", "mid", "highMid", "treble"];
   energies = predefinedFeq.map((freq) => {
     return {
       name: freq,
@@ -91,9 +97,9 @@ function updateVariables() {
 function SpectrumPaint() {
   noStroke();
   fill(randomColor())
-  for (var i = 0; i < spectrum.length; i++) {
-    var x = map(i, 0, spectrum.length, 0, width);
-    var h = -height + map(spectrum[i], 0, 255, height, 0);
+  for (let i = 0; i < spectrum.length; i++) {
+    let x = map(i, 0, spectrum.length, 0, width);
+    let h = -height + map(spectrum[i], 0, 255, height, 0);
     rect(x, height, width / spectrum.length, h)
   }
 }
@@ -103,9 +109,9 @@ function WaveformPaint() {
   beginShape();
   fill(0)
   strokeWeight(1);
-  for (var i = 0; i < waveform.length; i++) {
-    var x = map(i, 0, waveform.length, 0, width + 10);
-    var y = map(waveform[i], -1, 1, 0, height + 10);
+  for (let i = 0; i < waveform.length; i++) {
+    let x = map(i, 0, waveform.length, 0, width + 10);
+    let y = map(waveform[i], -1, 1, 0, height + 10);
     vertex(x, y);
   }
   endShape();
@@ -165,18 +171,22 @@ function windowResized() {
   background(0);
 }
 
+function mousePressed() {
+  userStartAudio();
+}
+
 // ===============
 // Particle class
 // ===============
 
-var Particle = function (position) {
+let Particle = function (position) {
   this.position = position;
   this.scale = random(0, 1);
   this.speed = createVector(0, random(0, 10));
   this.color = [random(0, 255), random(0, 255), random(0, 255)];
 }
 
-var theyExpand = 1;
+let theyExpand = 1;
 
 // use FFT bin level to change speed and diameter
 Particle.prototype.update = function (someLevel) {
